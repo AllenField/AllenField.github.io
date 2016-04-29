@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>浮白</title>
+  <subtitle>种一棵树最好的时间是十年前，其次是现在</subtitle>
+  <link href="/atom.xml" rel="self"/>
+  
+  <link href="http://fubai.tech/"/>
+  <updated>2016-04-29T10:22:31.000Z</updated>
+  <id>http://fubai.tech/</id>
+  
+  <author>
+    <name>fubai</name>
+    
+  </author>
+  
+  <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title></title>
+    <link href="http://fubai.tech/2016/04/29/openblockchain_setup/"/>
+    <id>http://fubai.tech/2016/04/29/openblockchain_setup/</id>
+    <published>2016-04-29T10:17:15.000Z</published>
+    <updated>2016-04-29T10:22:31.000Z</updated>
+    
+    <content type="html">&lt;p&gt;项目地址：&lt;a href=&quot;https://github.com/hyperledger/fabric&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/hyperledger/fabric&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;###先决条件&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Git client&lt;/li&gt;
+&lt;li&gt;Go - 1.6 or later&lt;/li&gt;
+&lt;li&gt;Vagrant - 1.7.4 or later&lt;/li&gt;
+&lt;li&gt;VirtualBox - 5.0 or later&lt;/li&gt;
+&lt;li&gt;BIOS Enabled Virtualization - Varies based on hardware&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;###克隆peer项目&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;fork一个你自己的分支仓库，地址为 https://github.com/&amp;lt;username&amp;gt;/fabric.git
+cd $GOPATH/src
+mkdir -p github.com/hyperledger
+cd github.com/hyperledger
+git clone https://github.com/&amp;lt;username&amp;gt;/fabric.git
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###使用Vagrant引导虚拟机&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/devenv
+vagrant up --构建虚拟机
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###构建基础核心&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/devenv
+vagrant ssh --登录到虚拟机
+cd $GOPATH/src/github.com/hyperledger/fabric/peer
+go build
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###启动peer&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
+./peer peer
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###单元测试&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
+go test -timeout=20m $(go list github.com/hyperledger/fabric/... | grep -v /vendor/ | grep -v /examples/)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###Behave Tests&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/bddtests
+behave
+&lt;/code&gt;&lt;/pre&gt;</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;项目地址：&lt;a href=&quot;https://github.com/hyperledger/fabric&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/hyperledger/fabric&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;###先
+    
+    </summary>
+    
+    
+  </entry>
+  
+</feed>
