@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><title> openblockchain设置开发网络环境 · 浮白</title><meta name="description" content="openblockchain设置开发网络环境 - fubai"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="short icon" href="/favicon.png"><link rel="stylesheet" href="/css/apollo.css"><link rel="stylesheet" href="http://fonts.useso.com/css?family=Source+Sans+Pro:400,600" type="text/css"></head><body><div class="wrap"><header><a href="/" class="logo-link"><img src="/favicon.png"></a><ul class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" class="nav-list-link">BLOG</a></li><li class="nav-list-item"><a href="/archives/" target="_self" class="nav-list-link">ARCHIVE</a></li><li class="nav-list-item"><a href="https://github.com/AllenField/" target="_blank" class="nav-list-link">GITHUB</a></li><li class="nav-list-item"><a href="/atom.xml" target="_self" class="nav-list-link">RSS</a></li></ul></header><section class="container"><div class="post"><article class="post-block"><h1 class="post-title">openblockchain设置开发网络环境</h1><div class="post-info">Apr 29, 2016</div><div class="post-content"><p>本文档介绍了用Docker容器在本地开发机器上设置网络环境。</p>
+<a id="more"></a>
+<p>所有的命令都应该在Vagrant中运行。</p>
+<p>注意：如果peer是通过Docker镜像启动的，而且开启了安全验证，那就需要给peer配置正确的CA地址（默认是localhost)。在core.yaml的paddr下的eca，tca和tlsca中指定CA地址。</p>
+<h4 id="搭建Docker镜像"><a href="#搭建Docker镜像" class="headerlink" title="搭建Docker镜像"></a>搭建Docker镜像</h4><p>要为hyperledger/fabric创建Docker镜像，首先要使用命令docker ps -a and docker rm清除所有活跃的容器 (hyperledger-peer and chaincode) 。第二步，用docker images和docker rmi删除老的镜像。注意：不要删除其他的镜像 (比如busybox or openblockchain/baseimage) ，还需要他们来正确的运行。</p>
+<p>现在我们准备好了构建一个新的Docker镜像：</p>
+<pre><code>cd $GOPATH/src/github.com/hyperledger/fabric/core/container
+go test -run BuildImage_Peer
+</code></pre><p>再次使用docker images检查可用的镜像，你就能看见hyperledger-peer了。</p>
+<h4 id="开启validating-peers"><a href="#开启validating-peers" class="headerlink" title="开启validating peers"></a>开启validating peers</h4><p>在Vagrant环境中，使用ip add命令找出docker0网络接口绑定的IP地址。比如：</p>
+<pre><code>vagrant@vagrant-ubuntu-trusty-64:/opt/gopath/src/github.com/hyperledger/fabric$ ip add
+
+&lt;&lt;&lt; detail removed &gt;&gt;&gt;
+
+3: docker0: &lt;NO-CARRIER,BROADCAST,MULTICAST,UP&gt; mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:ad:be:70:cb brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 scope global docker0
+        valid_lft forever preferred_lft forever
+    inet6 fe80::42:adff:febe:70cb/64 scope link
+        valid_lft forever preferred_lft forever
+</code></pre><p>你的输出信息里会包含类似的东西 inet 172.17.0.1/16 scope global docker0。这表示docker0 接口绑定在172.17.0.1上。把这个IP地址作为CORE_VM_ENDPOINT选项的值。要了解更多关于这个环境变量的信息，请查看core.yaml。 </p>
+<p>CORE_PEER_ID的值必须小写，因为我们将使用这个值作为我们构建的chaincode容器的一部分，而docker是不支持大写的。每个validating peer的ID都必须的唯一的。</p>
+<p>默认情况下，我们使用一个叫做NOOPS的一致性插件，这个插件做不到真正的一致性。如果你想使用其他的一致性插件，请看文档的结尾部分：Using Consensus Plugin。</p>
+<h4 id="开启第一个validating-peer"><a href="#开启第一个validating-peer" class="headerlink" title="开启第一个validating peer:"></a>开启第一个validating peer:</h4><pre><code>docker run --rm -it -e CORE_VM_ENDPOINT=http://172.17.0.1:4243 -e CORE_PEER_ID=vp0 -e CORE_PEER_ADDRESSAUTODETECT=true hyperledger-peer peer peer
+</code></pre><p>如果开启安全认证，环境变量的配置就要考略到安全设置，CA地址和peer的ID和密码都要改变：</p>
+<pre><code>docker run --rm -it -e CORE_VM_ENDPOINT=http://172.17.0.1:4243 -e CORE_PEER_ID=vp0 -e CORE_PEER_ADDRESSAUTODETECT=true -e CORE_SECURITY_ENABLED=true -e CORE_SECURITY_PRIVACY=true -e CORE_PEER_PKI_ECA_PADDR=172.17.0.1:50051 -e CORE_PEER_PKI_TCA_PADDR=172.17.0.1:50051 -e CORE_PEER_PKI_TLSCA_PADDR=172.17.0.1:50051 -e CORE_SECURITY_ENROLLID=vp0 -e CORE_SECURITY_ENROLLSECRET=XX  hyperledger-peer peer peer
+</code></pre><p>另外，validating peer (enrollID vp0 and enrollSecret XX) 要添加到membersrvc.yaml文件中。</p>
+<h4 id="开启第二个validating-peer"><a href="#开启第二个validating-peer" class="headerlink" title="开启第二个validating peer:"></a>开启第二个validating peer:</h4><p>我们要获取第一个validating peer的IP地址，第一个peer作为根节点，新的peer要连接到根节点。 这个地址会在第一个peer的终端窗口中打印出来(比如172.17.0.2)。我们要使用”vp1”作为第二个validating peer的ID。</p>
+<pre><code>docker run --rm -it -e CORE_VM_ENDPOINT=http://172.17.0.1:4243 -e CORE_PEER_ID=vp1 -e CORE_PEER_ADDRESSAUTODETECT=true -e CORE_PEER_DISCOVERY_ROOTNODE=172.17.0.2:30303 hyperledger-peer peer peer
+</code></pre><p>你可以用类似的方式启动更多的validating peers。记得要修改ID。</p>
+<h4 id="Deploy-Invoke-and-Query-a-Chaincode"><a href="#Deploy-Invoke-and-Query-a-Chaincode" class="headerlink" title="Deploy, Invoke, and Query a Chaincode"></a>Deploy, Invoke, and Query a Chaincode</h4><p>我们要用命令行接口发布一个chaincode到网络中。你可以在下面的目录中发现chaincode $GOPATH/src/github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02</p>
+<p>现在来发布，用CORE_PEER_ADDRESS可以把chaincode发布到任意一个指定的validating  peer：</p>
+<pre><code>cd $GOPATH/src/github.com/hyperledger/fabric/peer
+CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode deploy -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02 -c &apos;{&quot;Function&quot;:&quot;init&quot;, &quot;Args&quot;: [&quot;a&quot;,&quot;100&quot;, &quot;b&quot;, &quot;200&quot;]}&apos;
+</code></pre><p>在安全模式下要使用下面的命令：</p>
+<pre><code>CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode deploy -u jim -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02 -c &apos;{&quot;Function&quot;:&quot;init&quot;, &quot;Args&quot;: [&quot;a&quot;,&quot;100&quot;, &quot;b&quot;, &quot;200&quot;]}&apos;
+</code></pre><p>你可以在所有validating peers的屏幕上看到信息：”Received build request for chaincode spec”。</p>
+<p>当成功完成后，上面的命令就会打印出分配给刚发布的chaincode的”name”。这个”name”可以用作下面描述的invode和query命令的”-n”参数。这个”name”的值可以是：</p>
+<pre><code>bb540edfc1ee2ac0f5e2ec6000677f4cd1c6728046d5e32dede7fea11a42f86a6943b76a8f9154f4792032551ed320871ff7b7076047e4184292e01e3421889c
+</code></pre><p>在脚本中，这个名字可以被暂存以备接下来用。比如：</p>
+<pre><code>NAME=`CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode deploy ...`
+</code></pre><p>然后用$NAME替换下面例子中的 <name_value_returned_from_deploy_command></name_value_returned_from_deploy_command></p>
+<p>我们可以发起一笔’a’ 到’b’，价值10个单位的交易:</p>
+<pre><code>CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode invoke -n &lt;name_value_returned_from_deploy_command&gt; -c &apos;{&quot;Function&quot;: &quot;invoke&quot;, &quot;Args&quot;: [&quot;a&quot;, &quot;b&quot;, &quot;10&quot;]}&apos;
+</code></pre><p>在安全模式下要使用下面的命令：</p>
+<pre><code>CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode invoke -u jim -n &lt;name_value_returned_from_deploy_command&gt; -c &apos;{&quot;Function&quot;: &quot;invoke&quot;, &quot;Args&quot;: [&quot;a&quot;, &quot;b&quot;, &quot;10&quot;]}&apos;
+</code></pre><p>我们也可以运行一次查询，看看’a’当前拥有的值：</p>
+<pre><code>CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode query -l golang -n &lt;name_value_returned_from_deploy_command&gt; -c &apos;{&quot;Function&quot;: &quot;query&quot;, &quot;Args&quot;: [&quot;a&quot;]}&apos;
+</code></pre><p>在安全模式下要使用下面的命令：</p>
+<pre><code>CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode query -u jim -l golang -n &lt;name_value_returned_from_deploy_command&gt; -c &apos;{&quot;Function&quot;: &quot;query&quot;, &quot;Args&quot;: [&quot;a&quot;]}&apos;
+</code></pre><h4 id="Using-Consensus-Plugin"><a href="#Using-Consensus-Plugin" class="headerlink" title="Using Consensus Plugin"></a>Using Consensus Plugin</h4><p>一个一致性插件可能需要你设置一些指定的配置。比如，要使用框架里提供的Byzantine插件，要执行下面的配置：</p>
+<ul>
+<li>把core.yaml中的peer.validator.consensus设置为pbft</li>
+<li>确保core.yaml的peer.id按顺序的设置为vpX，其中X是一个从0到N-1的整数值。比如，有4台validating peers，把peer.id设置为vp0，vp1，vp2，vp3。</li>
+<li>在consensus/obcpbft/config.yaml中，把general.mode设置classic，batch或sieve中的一个值，把general.N设置为网络中validating peers的数量。(如果设置了batch，还要把general.batchsize设置为每批次中交易的数量。)</li>
+<li>在consensus/obcpbft/config.yaml中，还可以选择设置批次执行的超时时间(general.timeout.batch)，请求和执行之间可接受的延迟时间(general.timeout.request)，以及view-change (general.timeout.viewchange)</li>
+</ul>
+<p>查看core.yaml和consensus/obcpbft/config.yaml获取更多的信息。</p>
+<p>所有这些设置可以被命令行环境变量值替换，比如，CORE_PEER_VALIDATOR_CONSENSUS=pbft或者CORE_PBFT_GENERAL_MODE=sieve</p>
+<p>原文地址：<a href="https://github.com/hyperledger/fabric/blob/master/docs/dev-setup/devnet-setup.md" target="_blank" rel="external">https://github.com/hyperledger/fabric/blob/master/docs/dev-setup/devnet-setup.md</a></p>
+</div></article></div></section><footer><div class="paginator"><a href="/2016/04/29/怎么写chaincode/" class="prev">PREV</a><a href="/2016/04/29/在开发环境下编写，运行，测试chaincode/" class="next">NEXT</a></div><div class="copyright"><p>© 2016 <a href="http://fubai.tech">fubai</a>, unless otherwise noted.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "//hm.baidu.com/hm.js?a36e15d9e2adec9a21fcdd9f686b1ed2";var s = document.getElementsByTagName("script")[0]; s.parentNode.insertBefore(hm, s);})();</script></body></html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><title> 怎么写chaincode · 浮白</title><meta name="description" content="怎么写chaincode - fubai"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="short icon" href="/favicon.png"><link rel="stylesheet" href="/css/apollo.css"><link rel="stylesheet" href="http://fonts.useso.com/css?family=Source+Sans+Pro:400,600" type="text/css"></head><body><div class="wrap"><header><a href="/" class="logo-link"><img src="/favicon.png"></a><ul class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" class="nav-list-link">BLOG</a></li><li class="nav-list-item"><a href="/archives/" target="_self" class="nav-list-link">ARCHIVE</a></li><li class="nav-list-item"><a href="https://github.com/AllenField/" target="_blank" class="nav-list-link">GITHUB</a></li><li class="nav-list-item"><a href="/atom.xml" target="_self" class="nav-list-link">RSS</a></li></ul></header><section class="container"><div class="post"><article class="post-block"><h1 class="post-title">怎么写chaincode</h1><div class="post-info">Apr 29, 2016</div><div class="post-content"><h4 id="什么是chaincode"><a href="#什么是chaincode" class="headerlink" title="什么是chaincode?"></a>什么是chaincode?</h4><p>Chaincode是一段能让你和网络中共享的账本进行交互的代码。每当你在网络上进行交易，都是在调用chaincode的函数来读取或写入账本。</p>
+<a id="more"></a>
+<h4 id="实现chaincode的接口"><a href="#实现chaincode的接口" class="headerlink" title="实现chaincode的接口"></a>实现chaincode的接口</h4><p>第一，要在你的golang代码中实现chaincode shim接口。有三个主要的函数：Init，Invoke和Query。这三个函数都有相同的原型；他们都需要一个被命名为function的字符串参数和一个字符串数组参数。他们之间的不同之处在于被调用的时机。</p>
+<h4 id="依赖"><a href="#依赖" class="headerlink" title="依赖"></a>依赖</h4><p>import语句列出来几个需要的依赖：</p>
+<ul>
+<li>fmt - 包含Println用于调试和记录日志。</li>
+<li>errors - 标准go错误格式。</li>
+<li>github.com/hyperledger/fabric/core/chaincode/shim - 和peer交互的代码。</li>
+</ul>
+<h4 id="Init"><a href="#Init" class="headerlink" title="Init()"></a>Init()</h4><p>Init会在第一次发布chaincode的时候被调用。正如函数名的含义，Init函数应该被用于chaincode初始化。在我们的例子中，我们用Init配置了账本上一个变量的初始状态。 </p>
+<p>现在来修改chaincode.go。修改Init函数，把args参数的第一个元素的存储到键”hello_world”上。</p>
+<pre><code>func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+    if len(args) != 1 {
+        return nil, errors.New(&quot;Incorrect number of arguments. Expecting 1&quot;)
+    }
+
+    err := stub.PutState(&quot;hello_world&quot;, []byte(args[0]))
+    if err != nil {
+        return nil, err
+    }
+
+    return nil, nil
+}
+</code></pre><p>通过shim的stub.PutState函数来完成，stub.PutState的第一个参数是字符串类型的键，第二个参数是byte数组类型的值。这个函数可能会返回一个错误，我们的代码里做了检查，如果错误出现了，就把这个错误返回。</p>
+<h4 id="Invoke"><a href="#Invoke" class="headerlink" title="Invoke()"></a>Invoke()</h4><p>如果要用chaincode函数真正开始工作，那就该调用Invoke函数了。调用事务会成为链上的块。Invoke的结构很简单。它接收一个被命名为function的字符串参数，并基于这个参数调用chaincode的Go函数。</p>
+<p>在你的chaincode.go文件中，修改Invoke函数，调用write方法。</p>
+<pre><code>func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+    fmt.Println(&quot;invoke is running &quot; + function)
+
+    // Handle different functions
+    if function == &quot;init&quot; {
+        return t.Init(stub, &quot;init&quot;, args)
+    } else if function == &quot;write&quot; {
+        return t.write(stub, args)
+    }
+    fmt.Println(&quot;invoke did not find func: &quot; + function)
+
+    return nil, errors.New(&quot;Received unknown function invocation&quot;)
+}
+</code></pre><p>现在在chaincode.go中写下write函数：</p>
+<pre><code>func (t *SimpleChaincode) write(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+    var name, value string
+    var err error
+    fmt.Println(&quot;running write()&quot;)
+
+    if len(args) != 2 {
+        return nil, errors.New(&quot;Incorrect number of arguments. Expecting 2. name of the variable and value to set&quot;)
+    }
+
+    name = args[0]                            //rename for funsies
+    value = args[1]
+    err = stub.PutState(name, []byte(value))  //write the variable into the chaincode state
+    if err != nil {
+        return nil, err
+    }
+    return nil, nil
+}
+</code></pre><p>write函数应该和上面改过的Init函数很像。一个主要的不同在于现在你可以自己设置PutState的key和value了。PutState会将key/value存储到区块链账本中。</p>
+<h4 id="Query"><a href="#Query" class="headerlink" title="Query()"></a>Query()</h4><p>正如这个名字的含义，Query会在查询chaincode状态时被调用。Query不会导致区块被添加到链中。你将使用Query读取chaincode中的值。</p>
+<p>在chaincode.go中，修改Query函数，调用read函数：</p>
+<pre><code>func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+    fmt.Println(&quot;query is running &quot; + function)
+
+    // Handle different functions
+    if function == &quot;read&quot; {                            //read a variable
+        return t.read(stub, args)
+    }
+    fmt.Println(&quot;query did not find func: &quot; + function)
+
+    return nil, errors.New(&quot;Received unknown function query&quot;)
+}
+</code></pre><p>现在来在chaincode.go中写下read函数：</p>
+<pre><code>func (t *SimpleChaincode) read(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+    var name, jsonResp string
+    var err error
+
+    if len(args) != 1 {
+        return nil, errors.New(&quot;Incorrect number of arguments. Expecting name of the var to query&quot;)
+    }
+
+    name = args[0]
+    valAsbytes, err := stub.GetState(name)
+    if err != nil {
+        jsonResp = &quot;{\&quot;Error\&quot;:\&quot;Failed to get state for &quot; + name + &quot;\&quot;}&quot;
+        return nil, errors.New(jsonResp)
+    }
+
+    return valAsbytes, nil
+}
+</code></pre><p>read函数使用了PutState的补充GetState方法。这个shim的方法只有一个参数，这个参数是要查询的key。这个函数会返回一个byte数组。</p>
+<h4 id="Main"><a href="#Main" class="headerlink" title="Main()"></a>Main()</h4><p>最后，创建一个main函数，在为这个chaincode部署每个peer实例的时候，这个main方法就会被调用。这个main方法启动了chaincode，并把自己注册到peer中。拷贝下面的代码就行了，不需要修改：</p>
+<pre><code>func main() {
+    err := shim.Start(new(SimpleChaincode))
+    if err != nil {
+        fmt.Printf(&quot;Error starting Simple chaincode: %s&quot;, err)
+    }
+}
+</code></pre></div></article></div></section><footer><div class="paginator"><a href="/2016/04/29/openblockchain设置开发网络环境/" class="next">NEXT</a></div><div class="copyright"><p>© 2016 <a href="http://fubai.tech">fubai</a>, unless otherwise noted.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "//hm.baidu.com/hm.js?a36e15d9e2adec9a21fcdd9f686b1ed2";var s = document.getElementsByTagName("script")[0]; s.parentNode.insertBefore(hm, s);})();</script></body></html>

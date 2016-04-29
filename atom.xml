@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://fubai.tech/"/>
-  <updated>2016-04-29T10:22:31.000Z</updated>
+  <updated>2016-04-29T12:46:22.000Z</updated>
   <id>http://fubai.tech/</id>
   
   <author>
@@ -16,53 +16,494 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
-    <title></title>
-    <link href="http://fubai.tech/2016/04/29/openblockchain_setup/"/>
-    <id>http://fubai.tech/2016/04/29/openblockchain_setup/</id>
-    <published>2016-04-29T10:17:15.000Z</published>
-    <updated>2016-04-29T10:22:31.000Z</updated>
+    <title>怎么写chaincode</title>
+    <link href="http://fubai.tech/2016/04/29/%E6%80%8E%E4%B9%88%E5%86%99chaincode/"/>
+    <id>http://fubai.tech/2016/04/29/怎么写chaincode/</id>
+    <published>2016-04-29T12:40:22.000Z</published>
+    <updated>2016-04-29T12:46:22.000Z</updated>
     
-    <content type="html">&lt;p&gt;项目地址：&lt;a href=&quot;https://github.com/hyperledger/fabric&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/hyperledger/fabric&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;###先决条件&lt;/p&gt;
+    <content type="html">&lt;h4 id=&quot;什么是chaincode&quot;&gt;&lt;a href=&quot;#什么是chaincode&quot; class=&quot;headerlink&quot; title=&quot;什么是chaincode?&quot;&gt;&lt;/a&gt;什么是chaincode?&lt;/h4&gt;&lt;p&gt;Chaincode是一段能让你和网络中共享的账本进行交互的代码。每当你在网络上进行交易，都是在调用chaincode的函数来读取或写入账本。&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;h4 id=&quot;实现chaincode的接口&quot;&gt;&lt;a href=&quot;#实现chaincode的接口&quot; class=&quot;headerlink&quot; title=&quot;实现chaincode的接口&quot;&gt;&lt;/a&gt;实现chaincode的接口&lt;/h4&gt;&lt;p&gt;第一，要在你的golang代码中实现chaincode shim接口。有三个主要的函数：Init，Invoke和Query。这三个函数都有相同的原型；他们都需要一个被命名为function的字符串参数和一个字符串数组参数。他们之间的不同之处在于被调用的时机。&lt;/p&gt;
+&lt;h4 id=&quot;依赖&quot;&gt;&lt;a href=&quot;#依赖&quot; class=&quot;headerlink&quot; title=&quot;依赖&quot;&gt;&lt;/a&gt;依赖&lt;/h4&gt;&lt;p&gt;import语句列出来几个需要的依赖：&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;Git client&lt;/li&gt;
-&lt;li&gt;Go - 1.6 or later&lt;/li&gt;
-&lt;li&gt;Vagrant - 1.7.4 or later&lt;/li&gt;
-&lt;li&gt;VirtualBox - 5.0 or later&lt;/li&gt;
-&lt;li&gt;BIOS Enabled Virtualization - Varies based on hardware&lt;/li&gt;
+&lt;li&gt;fmt - 包含Println用于调试和记录日志。&lt;/li&gt;
+&lt;li&gt;errors - 标准go错误格式。&lt;/li&gt;
+&lt;li&gt;github.com/hyperledger/fabric/core/chaincode/shim - 和peer交互的代码。&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;###克隆peer项目&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;fork一个你自己的分支仓库，地址为 https://github.com/&amp;lt;username&amp;gt;/fabric.git
-cd $GOPATH/src
-mkdir -p github.com/hyperledger
-cd github.com/hyperledger
-git clone https://github.com/&amp;lt;username&amp;gt;/fabric.git
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###使用Vagrant引导虚拟机&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/devenv
-vagrant up --构建虚拟机
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###构建基础核心&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/devenv
-vagrant ssh --登录到虚拟机
-cd $GOPATH/src/github.com/hyperledger/fabric/peer
-go build
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###启动peer&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
-./peer peer
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###单元测试&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
-go test -timeout=20m $(go list github.com/hyperledger/fabric/... | grep -v /vendor/ | grep -v /examples/)
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;###Behave Tests&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/bddtests
-behave
+&lt;h4 id=&quot;Init&quot;&gt;&lt;a href=&quot;#Init&quot; class=&quot;headerlink&quot; title=&quot;Init()&quot;&gt;&lt;/a&gt;Init()&lt;/h4&gt;&lt;p&gt;Init会在第一次发布chaincode的时候被调用。正如函数名的含义，Init函数应该被用于chaincode初始化。在我们的例子中，我们用Init配置了账本上一个变量的初始状态。 &lt;/p&gt;
+&lt;p&gt;现在来修改chaincode.go。修改Init函数，把args参数的第一个元素的存储到键”hello_world”上。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+    if len(args) != 1 {
+        return nil, errors.New(&amp;quot;Incorrect number of arguments. Expecting 1&amp;quot;)
+    }
+
+    err := stub.PutState(&amp;quot;hello_world&amp;quot;, []byte(args[0]))
+    if err != nil {
+        return nil, err
+    }
+
+    return nil, nil
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;通过shim的stub.PutState函数来完成，stub.PutState的第一个参数是字符串类型的键，第二个参数是byte数组类型的值。这个函数可能会返回一个错误，我们的代码里做了检查，如果错误出现了，就把这个错误返回。&lt;/p&gt;
+&lt;h4 id=&quot;Invoke&quot;&gt;&lt;a href=&quot;#Invoke&quot; class=&quot;headerlink&quot; title=&quot;Invoke()&quot;&gt;&lt;/a&gt;Invoke()&lt;/h4&gt;&lt;p&gt;如果要用chaincode函数真正开始工作，那就该调用Invoke函数了。调用事务会成为链上的块。Invoke的结构很简单。它接收一个被命名为function的字符串参数，并基于这个参数调用chaincode的Go函数。&lt;/p&gt;
+&lt;p&gt;在你的chaincode.go文件中，修改Invoke函数，调用write方法。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+    fmt.Println(&amp;quot;invoke is running &amp;quot; + function)
+
+    // Handle different functions
+    if function == &amp;quot;init&amp;quot; {
+        return t.Init(stub, &amp;quot;init&amp;quot;, args)
+    } else if function == &amp;quot;write&amp;quot; {
+        return t.write(stub, args)
+    }
+    fmt.Println(&amp;quot;invoke did not find func: &amp;quot; + function)
+
+    return nil, errors.New(&amp;quot;Received unknown function invocation&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;现在在chaincode.go中写下write函数：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;func (t *SimpleChaincode) write(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+    var name, value string
+    var err error
+    fmt.Println(&amp;quot;running write()&amp;quot;)
+
+    if len(args) != 2 {
+        return nil, errors.New(&amp;quot;Incorrect number of arguments. Expecting 2. name of the variable and value to set&amp;quot;)
+    }
+
+    name = args[0]                            //rename for funsies
+    value = args[1]
+    err = stub.PutState(name, []byte(value))  //write the variable into the chaincode state
+    if err != nil {
+        return nil, err
+    }
+    return nil, nil
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;write函数应该和上面改过的Init函数很像。一个主要的不同在于现在你可以自己设置PutState的key和value了。PutState会将key/value存储到区块链账本中。&lt;/p&gt;
+&lt;h4 id=&quot;Query&quot;&gt;&lt;a href=&quot;#Query&quot; class=&quot;headerlink&quot; title=&quot;Query()&quot;&gt;&lt;/a&gt;Query()&lt;/h4&gt;&lt;p&gt;正如这个名字的含义，Query会在查询chaincode状态时被调用。Query不会导致区块被添加到链中。你将使用Query读取chaincode中的值。&lt;/p&gt;
+&lt;p&gt;在chaincode.go中，修改Query函数，调用read函数：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+    fmt.Println(&amp;quot;query is running &amp;quot; + function)
+
+    // Handle different functions
+    if function == &amp;quot;read&amp;quot; {                            //read a variable
+        return t.read(stub, args)
+    }
+    fmt.Println(&amp;quot;query did not find func: &amp;quot; + function)
+
+    return nil, errors.New(&amp;quot;Received unknown function query&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;现在来在chaincode.go中写下read函数：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;func (t *SimpleChaincode) read(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+    var name, jsonResp string
+    var err error
+
+    if len(args) != 1 {
+        return nil, errors.New(&amp;quot;Incorrect number of arguments. Expecting name of the var to query&amp;quot;)
+    }
+
+    name = args[0]
+    valAsbytes, err := stub.GetState(name)
+    if err != nil {
+        jsonResp = &amp;quot;{\&amp;quot;Error\&amp;quot;:\&amp;quot;Failed to get state for &amp;quot; + name + &amp;quot;\&amp;quot;}&amp;quot;
+        return nil, errors.New(jsonResp)
+    }
+
+    return valAsbytes, nil
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;read函数使用了PutState的补充GetState方法。这个shim的方法只有一个参数，这个参数是要查询的key。这个函数会返回一个byte数组。&lt;/p&gt;
+&lt;h4 id=&quot;Main&quot;&gt;&lt;a href=&quot;#Main&quot; class=&quot;headerlink&quot; title=&quot;Main()&quot;&gt;&lt;/a&gt;Main()&lt;/h4&gt;&lt;p&gt;最后，创建一个main函数，在为这个chaincode部署每个peer实例的时候，这个main方法就会被调用。这个main方法启动了chaincode，并把自己注册到peer中。拷贝下面的代码就行了，不需要修改：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;func main() {
+    err := shim.Start(new(SimpleChaincode))
+    if err != nil {
+        fmt.Printf(&amp;quot;Error starting Simple chaincode: %s&amp;quot;, err)
+    }
+}
 &lt;/code&gt;&lt;/pre&gt;</content>
     
     <summary type="html">
     
-      &lt;p&gt;项目地址：&lt;a href=&quot;https://github.com/hyperledger/fabric&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/hyperledger/fabric&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;###先
+      &lt;h4 id=&quot;什么是chaincode&quot;&gt;&lt;a href=&quot;#什么是chaincode&quot; class=&quot;headerlink&quot; title=&quot;什么是chaincode?&quot;&gt;&lt;/a&gt;什么是chaincode?&lt;/h4&gt;&lt;p&gt;Chaincode是一段能让你和网络中共享的账本进行交互的代码。每当你在网络上进行交易，都是在调用chaincode的函数来读取或写入账本。&lt;/p&gt;
     
     </summary>
     
+    
+  </entry>
+  
+  <entry>
+    <title>openblockchain设置开发网络环境</title>
+    <link href="http://fubai.tech/2016/04/29/openblockchain%E8%AE%BE%E7%BD%AE%E5%BC%80%E5%8F%91%E7%BD%91%E7%BB%9C%E7%8E%AF%E5%A2%83/"/>
+    <id>http://fubai.tech/2016/04/29/openblockchain设置开发网络环境/</id>
+    <published>2016-04-29T12:27:00.000Z</published>
+    <updated>2016-04-29T12:36:43.000Z</updated>
+    
+    <content type="html">&lt;p&gt;本文档介绍了用Docker容器在本地开发机器上设置网络环境。&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;p&gt;所有的命令都应该在Vagrant中运行。&lt;/p&gt;
+&lt;p&gt;注意：如果peer是通过Docker镜像启动的，而且开启了安全验证，那就需要给peer配置正确的CA地址（默认是localhost)。在core.yaml的paddr下的eca，tca和tlsca中指定CA地址。&lt;/p&gt;
+&lt;h4 id=&quot;搭建Docker镜像&quot;&gt;&lt;a href=&quot;#搭建Docker镜像&quot; class=&quot;headerlink&quot; title=&quot;搭建Docker镜像&quot;&gt;&lt;/a&gt;搭建Docker镜像&lt;/h4&gt;&lt;p&gt;要为hyperledger/fabric创建Docker镜像，首先要使用命令docker ps -a and docker rm清除所有活跃的容器 (hyperledger-peer and chaincode) 。第二步，用docker images和docker rmi删除老的镜像。注意：不要删除其他的镜像 (比如busybox or openblockchain/baseimage) ，还需要他们来正确的运行。&lt;/p&gt;
+&lt;p&gt;现在我们准备好了构建一个新的Docker镜像：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/core/container
+go test -run BuildImage_Peer
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;再次使用docker images检查可用的镜像，你就能看见hyperledger-peer了。&lt;/p&gt;
+&lt;h4 id=&quot;开启validating-peers&quot;&gt;&lt;a href=&quot;#开启validating-peers&quot; class=&quot;headerlink&quot; title=&quot;开启validating peers&quot;&gt;&lt;/a&gt;开启validating peers&lt;/h4&gt;&lt;p&gt;在Vagrant环境中，使用ip add命令找出docker0网络接口绑定的IP地址。比如：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;vagrant@vagrant-ubuntu-trusty-64:/opt/gopath/src/github.com/hyperledger/fabric$ ip add
+
+&amp;lt;&amp;lt;&amp;lt; detail removed &amp;gt;&amp;gt;&amp;gt;
+
+3: docker0: &amp;lt;NO-CARRIER,BROADCAST,MULTICAST,UP&amp;gt; mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:ad:be:70:cb brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 scope global docker0
+        valid_lft forever preferred_lft forever
+    inet6 fe80::42:adff:febe:70cb/64 scope link
+        valid_lft forever preferred_lft forever
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;你的输出信息里会包含类似的东西 inet 172.17.0.1/16 scope global docker0。这表示docker0 接口绑定在172.17.0.1上。把这个IP地址作为CORE_VM_ENDPOINT选项的值。要了解更多关于这个环境变量的信息，请查看core.yaml。 &lt;/p&gt;
+&lt;p&gt;CORE_PEER_ID的值必须小写，因为我们将使用这个值作为我们构建的chaincode容器的一部分，而docker是不支持大写的。每个validating peer的ID都必须的唯一的。&lt;/p&gt;
+&lt;p&gt;默认情况下，我们使用一个叫做NOOPS的一致性插件，这个插件做不到真正的一致性。如果你想使用其他的一致性插件，请看文档的结尾部分：Using Consensus Plugin。&lt;/p&gt;
+&lt;h4 id=&quot;开启第一个validating-peer&quot;&gt;&lt;a href=&quot;#开启第一个validating-peer&quot; class=&quot;headerlink&quot; title=&quot;开启第一个validating peer:&quot;&gt;&lt;/a&gt;开启第一个validating peer:&lt;/h4&gt;&lt;pre&gt;&lt;code&gt;docker run --rm -it -e CORE_VM_ENDPOINT=http://172.17.0.1:4243 -e CORE_PEER_ID=vp0 -e CORE_PEER_ADDRESSAUTODETECT=true hyperledger-peer peer peer
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;如果开启安全认证，环境变量的配置就要考略到安全设置，CA地址和peer的ID和密码都要改变：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;docker run --rm -it -e CORE_VM_ENDPOINT=http://172.17.0.1:4243 -e CORE_PEER_ID=vp0 -e CORE_PEER_ADDRESSAUTODETECT=true -e CORE_SECURITY_ENABLED=true -e CORE_SECURITY_PRIVACY=true -e CORE_PEER_PKI_ECA_PADDR=172.17.0.1:50051 -e CORE_PEER_PKI_TCA_PADDR=172.17.0.1:50051 -e CORE_PEER_PKI_TLSCA_PADDR=172.17.0.1:50051 -e CORE_SECURITY_ENROLLID=vp0 -e CORE_SECURITY_ENROLLSECRET=XX  hyperledger-peer peer peer
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;另外，validating peer (enrollID vp0 and enrollSecret XX) 要添加到membersrvc.yaml文件中。&lt;/p&gt;
+&lt;h4 id=&quot;开启第二个validating-peer&quot;&gt;&lt;a href=&quot;#开启第二个validating-peer&quot; class=&quot;headerlink&quot; title=&quot;开启第二个validating peer:&quot;&gt;&lt;/a&gt;开启第二个validating peer:&lt;/h4&gt;&lt;p&gt;我们要获取第一个validating peer的IP地址，第一个peer作为根节点，新的peer要连接到根节点。 这个地址会在第一个peer的终端窗口中打印出来(比如172.17.0.2)。我们要使用”vp1”作为第二个validating peer的ID。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;docker run --rm -it -e CORE_VM_ENDPOINT=http://172.17.0.1:4243 -e CORE_PEER_ID=vp1 -e CORE_PEER_ADDRESSAUTODETECT=true -e CORE_PEER_DISCOVERY_ROOTNODE=172.17.0.2:30303 hyperledger-peer peer peer
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;你可以用类似的方式启动更多的validating peers。记得要修改ID。&lt;/p&gt;
+&lt;h4 id=&quot;Deploy-Invoke-and-Query-a-Chaincode&quot;&gt;&lt;a href=&quot;#Deploy-Invoke-and-Query-a-Chaincode&quot; class=&quot;headerlink&quot; title=&quot;Deploy, Invoke, and Query a Chaincode&quot;&gt;&lt;/a&gt;Deploy, Invoke, and Query a Chaincode&lt;/h4&gt;&lt;p&gt;我们要用命令行接口发布一个chaincode到网络中。你可以在下面的目录中发现chaincode $GOPATH/src/github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02&lt;/p&gt;
+&lt;p&gt;现在来发布，用CORE_PEER_ADDRESS可以把chaincode发布到任意一个指定的validating  peer：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
+CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode deploy -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02 -c &amp;apos;{&amp;quot;Function&amp;quot;:&amp;quot;init&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;,&amp;quot;100&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;200&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在安全模式下要使用下面的命令：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode deploy -u jim -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02 -c &amp;apos;{&amp;quot;Function&amp;quot;:&amp;quot;init&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;,&amp;quot;100&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;200&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;你可以在所有validating peers的屏幕上看到信息：”Received build request for chaincode spec”。&lt;/p&gt;
+&lt;p&gt;当成功完成后，上面的命令就会打印出分配给刚发布的chaincode的”name”。这个”name”可以用作下面描述的invode和query命令的”-n”参数。这个”name”的值可以是：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;bb540edfc1ee2ac0f5e2ec6000677f4cd1c6728046d5e32dede7fea11a42f86a6943b76a8f9154f4792032551ed320871ff7b7076047e4184292e01e3421889c
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在脚本中，这个名字可以被暂存以备接下来用。比如：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;NAME=`CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode deploy ...`
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;然后用$NAME替换下面例子中的 &lt;name_value_returned_from_deploy_command&gt;&lt;/name_value_returned_from_deploy_command&gt;&lt;/p&gt;
+&lt;p&gt;我们可以发起一笔’a’ 到’b’，价值10个单位的交易:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode invoke -n &amp;lt;name_value_returned_from_deploy_command&amp;gt; -c &amp;apos;{&amp;quot;Function&amp;quot;: &amp;quot;invoke&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;10&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在安全模式下要使用下面的命令：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode invoke -u jim -n &amp;lt;name_value_returned_from_deploy_command&amp;gt; -c &amp;apos;{&amp;quot;Function&amp;quot;: &amp;quot;invoke&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;10&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;我们也可以运行一次查询，看看’a’当前拥有的值：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode query -l golang -n &amp;lt;name_value_returned_from_deploy_command&amp;gt; -c &amp;apos;{&amp;quot;Function&amp;quot;: &amp;quot;query&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在安全模式下要使用下面的命令：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CORE_PEER_ADDRESS=172.17.0.2:30303 ./peer chaincode query -u jim -l golang -n &amp;lt;name_value_returned_from_deploy_command&amp;gt; -c &amp;apos;{&amp;quot;Function&amp;quot;: &amp;quot;query&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;Using-Consensus-Plugin&quot;&gt;&lt;a href=&quot;#Using-Consensus-Plugin&quot; class=&quot;headerlink&quot; title=&quot;Using Consensus Plugin&quot;&gt;&lt;/a&gt;Using Consensus Plugin&lt;/h4&gt;&lt;p&gt;一个一致性插件可能需要你设置一些指定的配置。比如，要使用框架里提供的Byzantine插件，要执行下面的配置：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;把core.yaml中的peer.validator.consensus设置为pbft&lt;/li&gt;
+&lt;li&gt;确保core.yaml的peer.id按顺序的设置为vpX，其中X是一个从0到N-1的整数值。比如，有4台validating peers，把peer.id设置为vp0，vp1，vp2，vp3。&lt;/li&gt;
+&lt;li&gt;在consensus/obcpbft/config.yaml中，把general.mode设置classic，batch或sieve中的一个值，把general.N设置为网络中validating peers的数量。(如果设置了batch，还要把general.batchsize设置为每批次中交易的数量。)&lt;/li&gt;
+&lt;li&gt;在consensus/obcpbft/config.yaml中，还可以选择设置批次执行的超时时间(general.timeout.batch)，请求和执行之间可接受的延迟时间(general.timeout.request)，以及view-change (general.timeout.viewchange)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;查看core.yaml和consensus/obcpbft/config.yaml获取更多的信息。&lt;/p&gt;
+&lt;p&gt;所有这些设置可以被命令行环境变量值替换，比如，CORE_PEER_VALIDATOR_CONSENSUS=pbft或者CORE_PBFT_GENERAL_MODE=sieve&lt;/p&gt;
+&lt;p&gt;原文地址：&lt;a href=&quot;https://github.com/hyperledger/fabric/blob/master/docs/dev-setup/devnet-setup.md&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/hyperledger/fabric/blob/master/docs/dev-setup/devnet-setup.md&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;本文档介绍了用Docker容器在本地开发机器上设置网络环境。&lt;/p&gt;
+    
+    </summary>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>在开发环境下编写，运行，测试chaincode</title>
+    <link href="http://fubai.tech/2016/04/29/%E5%9C%A8%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%BC%96%E5%86%99%EF%BC%8C%E8%BF%90%E8%A1%8C%EF%BC%8C%E6%B5%8B%E8%AF%95chaincode/"/>
+    <id>http://fubai.tech/2016/04/29/在开发环境下编写，运行，测试chaincode/</id>
+    <published>2016-04-29T11:32:26.000Z</published>
+    <updated>2016-04-29T12:24:09.000Z</updated>
+    
+    <content type="html">&lt;p&gt;开发者要能在不完整的终端网络中测试区块链。本文档描述了怎样在本地开发环境中编写，构建，测试区块链。&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;p&gt;首先需要有多个Vagrant的终端窗体。一个Vagrant终端运行validating peer，一个运行chaincode，还有一个通过命令行接口或者REST API来执行交易。当启用了安全验证后，还需要一个运行CA服务。&lt;/p&gt;
+&lt;h4 id=&quot;安全设置-可选&quot;&gt;&lt;a href=&quot;#安全设置-可选&quot; class=&quot;headerlink&quot; title=&quot;安全设置 (可选)&quot;&gt;&lt;/a&gt;安全设置 (可选)&lt;/h4&gt;&lt;p&gt;在命令行终端中，进入工作空间环境下的devenv子目录。登录Vagrant：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;vagrant ssh
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;要在开发环境中启用安全设置，首先要构建并运行CA服务：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/membersrvc
+go build
+./membersrvc
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;上面的命令使用membersrvc.yaml中的默认配置构建运行了CA服务。默认配置中包含了很多已经注册到CA中的用户，这些用户写在配置文件的users部分。要在CA中注册其他用户用于测试，需要修改membersrvc.yaml的users部分，增加一对enrollmentID和enrollmentPW。&lt;/p&gt;
+&lt;p&gt;enrollmentPW前面有一个数字，代表了用户的角色，其中1代表client，2代表non-validating peer，4代表validating peer，8代表auditor。&lt;/p&gt;
+&lt;h4 id=&quot;Vagrant-终端-1-validating-peer&quot;&gt;&lt;a href=&quot;#Vagrant-终端-1-validating-peer&quot; class=&quot;headerlink&quot; title=&quot;Vagrant 终端 1 (validating peer)&quot;&gt;&lt;/a&gt;Vagrant 终端 1 (validating peer)&lt;/h4&gt;&lt;p&gt;记住：在启用安全后，要运行peer，首先要修改core.yaml配置文件，设置security.enabled为true。也可以通过把环境变量CORE_SECURITY_ENABLED设置为true来运行peer。要启用交易的隐私和保密(要先启用安全)，修改core.yaml的security.privacy为true。也可以通过把环境变量CORE_SECURITY_PRIVACY设置为true来运行peer。&lt;/p&gt;
+&lt;p&gt;在命令行终端中，进入工作空间环境下的devenv子目录。登录Vagrant：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;vagrant ssh
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在把security.enabled和security.privacy设置为true之后，再构建和运行peer进程：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
+go build
+./peer peer --peer-chaincodedev   
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;也可以通过环境变量来启用security和privacy:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CORE_SECURITY_ENABLED=true CORE_SECURITY_PRIVACY=true ./peer peer --peer-chaincodedev
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;Vagrant-终端-2-chaincode&quot;&gt;&lt;a href=&quot;#Vagrant-终端-2-chaincode&quot; class=&quot;headerlink&quot; title=&quot;Vagrant 终端 2 (chaincode)&quot;&gt;&lt;/a&gt;Vagrant 终端 2 (chaincode)&lt;/h4&gt;&lt;p&gt;在命令行终端中，进入工作空间环境下的devenv子目录。登录Vagrant：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;vagrant ssh
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;构建源码仓库提供的chaincode_example02:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02
+go build
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;当你已经准备好要开始创建自己的chaincode时，在/fabric/examples/go/chaincode下创建一个子目录用来存放chaincode代码。你可以把chaincode_example02中的文件拷贝进去之后再修改&lt;/p&gt;
+&lt;p&gt;运行下面的chaincode命令，用validating peer(Vagrant 终端 1)开始并注册chaincode:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CORE_CHAINCODE_ID_NAME=mycc CORE_PEER_ADDRESS=0.0.0.0:30303 ./chaincode_example02
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;chaincode的控制台会显示”Received REGISTERED, ready for invocations”，这证明chaincode已经准备好接收请求了。如果上面没有显示那段信息的话，那就是部署的过程中有错误。请重新看一遍上面的步骤，解决这个问题。遵循下面的步骤发布chaincode，调用或者查询交易。&lt;/p&gt;
+&lt;h4 id=&quot;Vagrant-终端-3-CLI-or-REST-API&quot;&gt;&lt;a href=&quot;#Vagrant-终端-3-CLI-or-REST-API&quot; class=&quot;headerlink&quot; title=&quot;Vagrant 终端 3 (CLI or REST API)&quot;&gt;&lt;/a&gt;Vagrant 终端 3 (CLI or REST API)&lt;/h4&gt;&lt;p&gt;注意REST API的端口&lt;/p&gt;
+&lt;p&gt;REST接口的端口在core.yaml中定义的是5000。如果要在Vagrant中发送一个Rest请求给peer节点，使用的是5000端口。如果在Vagrant之外，也就是虚拟机之外发送REST请求，要使用3000端口。这是在构建虚拟机时，配置在Vagrantfile中的。&lt;/p&gt;
+&lt;p&gt;注意安全功能&lt;/p&gt;
+&lt;p&gt;现在的安全实现假定终端用户的安全认证发生在应用程序层，而不是在chaincode的基础架构中。只要该安全认证对应用程序来说是合适的就行。在用户认证成功之后 ，应用程序要在CA中执行一次注册。如果尝试在CA中对同一个用户注册第二次，就会报错。在注册期间，应用程序会给CA发送一个请求验证用户是否注册成功，CA会响应一个用户证书和密钥对。从CA收到的注册和交易证书会被存在本地的/var/hyperledger/production/crypto/client/文件夹中。用户要通过指定的peer节点进行交易，就必须要在该节点的认证资料存储目录中有自己的对应的信息。指定peer节点下的目录只允许用户通过该peer节点进行交易。如果终端用户要通过多于一个peer节点来执行交易，应用程序要负责把所有的认证资料复制到其他的peer节点上。这是必须的，因为在CA上重复注册同一个用户会失败。&lt;/p&gt;
+&lt;p&gt;当安全启用之后，命令行的命令和REST的请求中都必须包含已经登录的注册用户的enrollmentID ，否则就会导致错误。要登录一个注册后的用户，可以通过下面介绍的命令行或者REST API方式。&lt;/p&gt;
+&lt;p&gt;用下面的命令在命令行中登录，username是membersrvc.yaml的users部分配置的enrollmentID 。&lt;/p&gt;
+&lt;p&gt;在命令行终端中，进入工作空间环境下的devenv子目录。登录Vagrant：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;vagrant ssh
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;通过命令行接口登录，替换下面的username：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
+./peer login &amp;lt;username&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;该命令会提示输入密码，这个密码也是在membersrce.yaml中的。&lt;/p&gt;
+&lt;p&gt;通过REST API登录，发送一个POST请求到/registrar，要包含enrollmentID和enrollmentPW。记住，在Vagrant里面要用5000端口，在Vagrant外面要用3000端口。&lt;/p&gt;
+&lt;p&gt;REST Request:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;POST localhost:3000/registrar
+
+{
+    &amp;quot;enrollId&amp;quot;: &amp;quot;jim&amp;quot;,
+    &amp;quot;enrollSecret&amp;quot;: &amp;quot;NPKYL39uKbkj&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;REST Response:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;200 OK
+{
+    &amp;quot;OK&amp;quot;: &amp;quot;Login successful for user &amp;apos;jim&amp;apos;.&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;通过命令行接口或者REST-API发布Chaincode&quot;&gt;&lt;a href=&quot;#通过命令行接口或者REST-API发布Chaincode&quot; class=&quot;headerlink&quot; title=&quot;通过命令行接口或者REST API发布Chaincode&quot;&gt;&lt;/a&gt;通过命令行接口或者REST API发布Chaincode&lt;/h4&gt;&lt;p&gt;首先，发送一个chaincode deploy transaction，只发送一次，到validating peer。命令行接口会通过core.yaml中的配置信息连接到validating peer。记住，一般deploy transaction要求一个path参数来定位，构建，发布chaincode。但是由于这里的介绍是为本地开发模式指定的，而且chaincode是手动发布的，所以使用了name参数来替代。 &lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
+./peer chaincode deploy -n mycc -c &amp;apos;{&amp;quot;Function&amp;quot;:&amp;quot;init&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;,&amp;quot;100&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;200&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;也可以使用REST API来运行chaincode deploy transaction。记住，在Vagrant里面使用5000端口，在Vagrant外面使用3000端口。&lt;/p&gt;
+&lt;p&gt;REST Request:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;POST host:port/chaincode
+
+{
+    &amp;quot;jsonrpc&amp;quot;: &amp;quot;2.0&amp;quot;,
+    &amp;quot;method&amp;quot;: &amp;quot;deploy&amp;quot;,
+    &amp;quot;params&amp;quot;: {
+        &amp;quot;type&amp;quot;: 1,
+        &amp;quot;chaincodeID&amp;quot;:{
+            &amp;quot;name&amp;quot;: &amp;quot;mycc&amp;quot;
+        },
+        &amp;quot;ctorMsg&amp;quot;: {
+            &amp;quot;function&amp;quot;:&amp;quot;init&amp;quot;,
+            &amp;quot;args&amp;quot;:[&amp;quot;a&amp;quot;, &amp;quot;100&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;200&amp;quot;]
+        }
+    },
+    &amp;quot;id&amp;quot;: 1
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;REST Response:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;{
+    &amp;quot;jsonrpc&amp;quot;: &amp;quot;2.0&amp;quot;,
+    &amp;quot;result&amp;quot;: {
+        &amp;quot;status&amp;quot;: &amp;quot;OK&amp;quot;,
+        &amp;quot;message&amp;quot;: &amp;quot;mycc&amp;quot;
+    },
+    &amp;quot;id&amp;quot;: 1
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;记住，当安全启用之后，要修改命令行的命令和REST API的请求内容，带上登录用户的enrollmentID。在命令行里，通过-u参数传递enrollmentID。在REST API里，通过secureContext。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;./peer chaincode deploy -u jim -n mycc -c &amp;apos;{&amp;quot;Function&amp;quot;:&amp;quot;init&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;,&amp;quot;100&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;200&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;REST Request:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;POST host:port/chaincode
+
+{
+    &amp;quot;jsonrpc&amp;quot;: &amp;quot;2.0&amp;quot;,
+    &amp;quot;method&amp;quot;: &amp;quot;deploy&amp;quot;,
+    &amp;quot;params&amp;quot;: {
+        &amp;quot;type&amp;quot;: 1,
+        &amp;quot;chaincodeID&amp;quot;:{
+            &amp;quot;name&amp;quot;: &amp;quot;mycc&amp;quot;
+        },
+        &amp;quot;ctorMsg&amp;quot;: {
+            &amp;quot;function&amp;quot;:&amp;quot;init&amp;quot;,
+            &amp;quot;args&amp;quot;:[&amp;quot;a&amp;quot;, &amp;quot;100&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;200&amp;quot;]
+        },
+        &amp;quot;secureContext&amp;quot;: &amp;quot;jim&amp;quot;
+    },
+    &amp;quot;id&amp;quot;: 1
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;上面初始化了一个chaincode，包含了a和b的信息，假设是帐户余额信息，那么现在我们记下了a有100块，b有200块。&lt;/p&gt;
+&lt;h4 id=&quot;通过命令行接口或者REST-API调用Chaincode交易&quot;&gt;&lt;a href=&quot;#通过命令行接口或者REST-API调用Chaincode交易&quot; class=&quot;headerlink&quot; title=&quot;通过命令行接口或者REST API调用Chaincode交易&quot;&gt;&lt;/a&gt;通过命令行接口或者REST API调用Chaincode交易&lt;/h4&gt;&lt;p&gt;在命令行中通过chaincode调用交易，-n参数需要和chaincode窗口(Vagrant 终端 2)中的-n参数匹配：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;./peer chaincode invoke -l golang -n mycc -c &amp;apos;{&amp;quot;Function&amp;quot;: &amp;quot;invoke&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;10&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;下面是通过REST API调用，注意端口哦：&lt;/p&gt;
+&lt;p&gt;REST Request:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;POST host:port/chaincode
+
+{
+    &amp;quot;jsonrpc&amp;quot;: &amp;quot;2.0&amp;quot;,
+    &amp;quot;method&amp;quot;: &amp;quot;invoke&amp;quot;,
+    &amp;quot;params&amp;quot;: {
+        &amp;quot;type&amp;quot;: 1,
+        &amp;quot;chaincodeID&amp;quot;:{
+            &amp;quot;name&amp;quot;:&amp;quot;mycc&amp;quot;
+        },
+        &amp;quot;ctorMsg&amp;quot;: {
+            &amp;quot;function&amp;quot;:&amp;quot;invoke&amp;quot;,
+            &amp;quot;args&amp;quot;:[&amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;10&amp;quot;]
+        }
+    },
+    &amp;quot;id&amp;quot;: 3
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;REST Response:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;{
+    &amp;quot;jsonrpc&amp;quot;: &amp;quot;2.0&amp;quot;,
+    &amp;quot;result&amp;quot;: {
+        &amp;quot;status&amp;quot;: &amp;quot;OK&amp;quot;,
+        &amp;quot;message&amp;quot;: &amp;quot;5a4540e5-902b-422d-a6ab-e70ab36a2e6d&amp;quot;
+    },
+    &amp;quot;id&amp;quot;: 3
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;下面是在启用安全之后的调用方式：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;./peer chaincode invoke -u jim -l golang -n mycc -c &amp;apos;{&amp;quot;Function&amp;quot;: &amp;quot;invoke&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;10&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;REST Request:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;POST host:port/chaincode
+
+{
+    &amp;quot;jsonrpc&amp;quot;: &amp;quot;2.0&amp;quot;,
+    &amp;quot;method&amp;quot;: &amp;quot;invoke&amp;quot;,
+    &amp;quot;params&amp;quot;: {
+        &amp;quot;type&amp;quot;: 1,
+        &amp;quot;chaincodeID&amp;quot;:{
+            &amp;quot;name&amp;quot;:&amp;quot;mycc&amp;quot;
+        },
+        &amp;quot;ctorMsg&amp;quot;: {
+            &amp;quot;function&amp;quot;:&amp;quot;invoke&amp;quot;,
+            &amp;quot;args&amp;quot;:[&amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;10&amp;quot;]
+        },
+        &amp;quot;secureContext&amp;quot;: &amp;quot;jim&amp;quot;
+    },
+    &amp;quot;id&amp;quot;: 3
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;上面发起了一笔交易，将a的10块钱给了b。&lt;/p&gt;
+&lt;h4 id=&quot;通过命令行接口或者REST-API查询Chaincode&quot;&gt;&lt;a href=&quot;#通过命令行接口或者REST-API查询Chaincode&quot; class=&quot;headerlink&quot; title=&quot;通过命令行接口或者REST API查询Chaincode&quot;&gt;&lt;/a&gt;通过命令行接口或者REST API查询Chaincode&lt;/h4&gt;&lt;p&gt;查询chaincode中的指定信息:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;./peer chaincode query -l golang -n mycc -c &amp;apos;{&amp;quot;Function&amp;quot;: &amp;quot;query&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;b&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;下面是响应信息：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;210
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;下面是通过REST API的方式查询chaincode信息：&lt;/p&gt;
+&lt;p&gt;REST Request:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;POST host:port/chaincode
+
+{
+    &amp;quot;jsonrpc&amp;quot;: &amp;quot;2.0&amp;quot;,
+    &amp;quot;method&amp;quot;: &amp;quot;query&amp;quot;,
+    &amp;quot;params&amp;quot;: {
+        &amp;quot;type&amp;quot;: 1,
+        &amp;quot;chaincodeID&amp;quot;:{
+            &amp;quot;name&amp;quot;:&amp;quot;mycc&amp;quot;
+        },
+        &amp;quot;ctorMsg&amp;quot;: {
+            &amp;quot;function&amp;quot;:&amp;quot;query&amp;quot;,
+            &amp;quot;args&amp;quot;:[&amp;quot;a&amp;quot;]
+        }
+    },
+    &amp;quot;id&amp;quot;: 5
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;REST Response:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;{
+    &amp;quot;jsonrpc&amp;quot;: &amp;quot;2.0&amp;quot;,
+    &amp;quot;result&amp;quot;: {
+        &amp;quot;status&amp;quot;: &amp;quot;OK&amp;quot;,
+        &amp;quot;message&amp;quot;: &amp;quot;90&amp;quot;
+    },
+    &amp;quot;id&amp;quot;: 5
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;下面是安全启用之后的调用方式：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;./peer chaincode query -u jim -l golang -n mycc -c &amp;apos;{&amp;quot;Function&amp;quot;: &amp;quot;query&amp;quot;, &amp;quot;Args&amp;quot;: [&amp;quot;b&amp;quot;]}&amp;apos;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;REST Request:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;POST host:port/chaincode
+
+{
+    &amp;quot;jsonrpc&amp;quot;: &amp;quot;2.0&amp;quot;,
+    &amp;quot;method&amp;quot;: &amp;quot;query&amp;quot;,
+    &amp;quot;params&amp;quot;: {
+        &amp;quot;type&amp;quot;: 1,
+        &amp;quot;chaincodeID&amp;quot;:{
+            &amp;quot;name&amp;quot;:&amp;quot;mycc&amp;quot;
+        },
+        &amp;quot;ctorMsg&amp;quot;: {
+            &amp;quot;function&amp;quot;:&amp;quot;query&amp;quot;,
+            &amp;quot;args&amp;quot;:[&amp;quot;a&amp;quot;]
+        },
+        &amp;quot;secureContext&amp;quot;: &amp;quot;jim&amp;quot;
+    },
+    &amp;quot;id&amp;quot;: 5
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;删除启用了安全之后，产生的临时文件&quot;&gt;&lt;a href=&quot;#删除启用了安全之后，产生的临时文件&quot; class=&quot;headerlink&quot; title=&quot;删除启用了安全之后，产生的临时文件&quot;&gt;&lt;/a&gt;删除启用了安全之后，产生的临时文件&lt;/h4&gt;&lt;p&gt;在安全模式下测试完chaincode后，要删除CA服务生成的临时文件，要删除客户端注册证书，注册key，交易证书链等等。如果你想注册一个前面已经注册的用户，就必须删除这些文件。&lt;/p&gt;
+&lt;p&gt;在命令行终端中，进入到工作空间环境的devenv子目录。登录到Vagrant终端：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;vagrant ssh
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;然后运行：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;rm -rf /var/hyperledger/production
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;原文地址：&lt;a href=&quot;https://github.com/hyperledger/fabric/blob/master/docs/API/SandboxSetup.md&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/hyperledger/fabric/blob/master/docs/API/SandboxSetup.md&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;开发者要能在不完整的终端网络中测试区块链。本文档描述了怎样在本地开发环境中编写，构建，测试区块链。&lt;/p&gt;
+    
+    </summary>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>安装openblockchain</title>
+    <link href="http://fubai.tech/2016/04/29/%E5%AE%89%E8%A3%85openblockchain/"/>
+    <id>http://fubai.tech/2016/04/29/安装openblockchain/</id>
+    <published>2016-04-29T10:56:20.000Z</published>
+    <updated>2016-04-29T12:25:08.000Z</updated>
+    
+    <content type="html">&lt;h4 id=&quot;先决条件&quot;&gt;&lt;a href=&quot;#先决条件&quot; class=&quot;headerlink&quot; title=&quot;先决条件&quot;&gt;&lt;/a&gt;先决条件&lt;/h4&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://git-scm.com/downloads&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;Git client&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://golang.org/&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;Go&lt;/a&gt; - 1.6 or later&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.vagrantup.com/&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;Vagrant&lt;/a&gt; - 1.7.4 or later&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.virtualbox.org/&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;VirtualBox&lt;/a&gt; - 5.0 or later&lt;/li&gt;
+&lt;li&gt;在BIOS中启用虚拟化 - 不同的机器设置方法不同&lt;/li&gt;
+&lt;/ul&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;h4 id=&quot;克隆peer项目&quot;&gt;&lt;a href=&quot;#克隆peer项目&quot; class=&quot;headerlink&quot; title=&quot;克隆peer项目&quot;&gt;&lt;/a&gt;克隆peer项目&lt;/h4&gt;&lt;p&gt;fork一个你自己的分支仓库，地址为 &lt;a href=&quot;https://github.com/&amp;lt;username&amp;gt;/fabric.git&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/&amp;lt;username&amp;gt;/fabric.git&lt;/a&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd $GOPATH/src
+ mkdir -p github.com/hyperledger
+ cd github.com/hyperledger
+ git clone https://github.com/&amp;lt;username&amp;gt;/fabric.git
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;使用Vagrant引导虚拟机&quot;&gt;&lt;a href=&quot;#使用Vagrant引导虚拟机&quot; class=&quot;headerlink&quot; title=&quot;使用Vagrant引导虚拟机&quot;&gt;&lt;/a&gt;使用Vagrant引导虚拟机&lt;/h4&gt;&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/devenv
+ vagrant up --构建虚拟机
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;构建基础核心&quot;&gt;&lt;a href=&quot;#构建基础核心&quot; class=&quot;headerlink&quot; title=&quot;构建基础核心&quot;&gt;&lt;/a&gt;构建基础核心&lt;/h4&gt;&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/devenv
+ vagrant ssh --登录到虚拟机
+ cd $GOPATH/src/github.com/hyperledger/fabric/peer
+ go build
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;启动peer&quot;&gt;&lt;a href=&quot;#启动peer&quot; class=&quot;headerlink&quot; title=&quot;启动peer&quot;&gt;&lt;/a&gt;启动peer&lt;/h4&gt;&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
+ ./peer peer
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;单元测试&quot;&gt;&lt;a href=&quot;#单元测试&quot; class=&quot;headerlink&quot; title=&quot;单元测试&quot;&gt;&lt;/a&gt;单元测试&lt;/h4&gt;&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/peer
+ go test -timeout=20m $(go list github.com/hyperledger/fabric/... | grep -v /vendor/ | grep -v /examples/)
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;Behave-Tests&quot;&gt;&lt;a href=&quot;#Behave-Tests&quot; class=&quot;headerlink&quot; title=&quot;Behave Tests&quot;&gt;&lt;/a&gt;Behave Tests&lt;/h4&gt;&lt;pre&gt;&lt;code&gt;cd $GOPATH/src/github.com/hyperledger/fabric/bddtests
+ behave
+&lt;/code&gt;&lt;/pre&gt;&lt;h4 id=&quot;最后&quot;&gt;&lt;a href=&quot;#最后&quot; class=&quot;headerlink&quot; title=&quot;最后&quot;&gt;&lt;/a&gt;最后&lt;/h4&gt;&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;主机必须支持虚拟化，并且开启，阿里云的ECS是不支持虚拟化的&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;GOPATH必须是属于当前用户的，该用户最好不是root&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;第一次vagrant up的过程，需要翻墙下载，保证网络通畅&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;$GOPATH/src/github.com/hyperledger/fabric/devenv下的setup.sh中，会安装pyyaml，这个东西死活会报错，导致整个安装进程失败，可以先将其从setup.sh中删掉，然后再执行vagrant up&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;项目地址：&lt;a href=&quot;https://github.com/hyperledger/fabric&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/hyperledger/fabric&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;原文地址：&lt;a href=&quot;https://github.com/hyperledger/fabric/blob/master/docs/dev-setup/devenv.md&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://github.com/hyperledger/fabric/blob/master/docs/dev-setup/devenv.md&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;h4 id=&quot;先决条件&quot;&gt;&lt;a href=&quot;#先决条件&quot; class=&quot;headerlink&quot; title=&quot;先决条件&quot;&gt;&lt;/a&gt;先决条件&lt;/h4&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://git-scm.com/downloads&quot;&gt;Git client&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://golang.org/&quot;&gt;Go&lt;/a&gt; - 1.6 or later&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.vagrantup.com/&quot;&gt;Vagrant&lt;/a&gt; - 1.7.4 or later&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.virtualbox.org/&quot;&gt;VirtualBox&lt;/a&gt; - 5.0 or later&lt;/li&gt;
+&lt;li&gt;在BIOS中启用虚拟化 - 不同的机器设置方法不同&lt;/li&gt;
+&lt;/ul&gt;
+    
+    </summary>
+    
+    
+      <category term="openblockchain setup" scheme="http://fubai.tech/tags/openblockchain-setup/"/>
     
   </entry>
   

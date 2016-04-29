@@ -1,0 +1,219 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><title> 在开发环境下编写，运行，测试chaincode · 浮白</title><meta name="description" content="在开发环境下编写，运行，测试chaincode - fubai"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="short icon" href="/favicon.png"><link rel="stylesheet" href="/css/apollo.css"><link rel="stylesheet" href="http://fonts.useso.com/css?family=Source+Sans+Pro:400,600" type="text/css"></head><body><div class="wrap"><header><a href="/" class="logo-link"><img src="/favicon.png"></a><ul class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" class="nav-list-link">BLOG</a></li><li class="nav-list-item"><a href="/archives/" target="_self" class="nav-list-link">ARCHIVE</a></li><li class="nav-list-item"><a href="https://github.com/AllenField/" target="_blank" class="nav-list-link">GITHUB</a></li><li class="nav-list-item"><a href="/atom.xml" target="_self" class="nav-list-link">RSS</a></li></ul></header><section class="container"><div class="post"><article class="post-block"><h1 class="post-title">在开发环境下编写，运行，测试chaincode</h1><div class="post-info">Apr 29, 2016</div><div class="post-content"><p>开发者要能在不完整的终端网络中测试区块链。本文档描述了怎样在本地开发环境中编写，构建，测试区块链。</p>
+<a id="more"></a>
+<p>首先需要有多个Vagrant的终端窗体。一个Vagrant终端运行validating peer，一个运行chaincode，还有一个通过命令行接口或者REST API来执行交易。当启用了安全验证后，还需要一个运行CA服务。</p>
+<h4 id="安全设置-可选"><a href="#安全设置-可选" class="headerlink" title="安全设置 (可选)"></a>安全设置 (可选)</h4><p>在命令行终端中，进入工作空间环境下的devenv子目录。登录Vagrant：</p>
+<pre><code>vagrant ssh
+</code></pre><p>要在开发环境中启用安全设置，首先要构建并运行CA服务：</p>
+<pre><code>cd $GOPATH/src/github.com/hyperledger/fabric/membersrvc
+go build
+./membersrvc
+</code></pre><p>上面的命令使用membersrvc.yaml中的默认配置构建运行了CA服务。默认配置中包含了很多已经注册到CA中的用户，这些用户写在配置文件的users部分。要在CA中注册其他用户用于测试，需要修改membersrvc.yaml的users部分，增加一对enrollmentID和enrollmentPW。</p>
+<p>enrollmentPW前面有一个数字，代表了用户的角色，其中1代表client，2代表non-validating peer，4代表validating peer，8代表auditor。</p>
+<h4 id="Vagrant-终端-1-validating-peer"><a href="#Vagrant-终端-1-validating-peer" class="headerlink" title="Vagrant 终端 1 (validating peer)"></a>Vagrant 终端 1 (validating peer)</h4><p>记住：在启用安全后，要运行peer，首先要修改core.yaml配置文件，设置security.enabled为true。也可以通过把环境变量CORE_SECURITY_ENABLED设置为true来运行peer。要启用交易的隐私和保密(要先启用安全)，修改core.yaml的security.privacy为true。也可以通过把环境变量CORE_SECURITY_PRIVACY设置为true来运行peer。</p>
+<p>在命令行终端中，进入工作空间环境下的devenv子目录。登录Vagrant：</p>
+<pre><code>vagrant ssh
+</code></pre><p>在把security.enabled和security.privacy设置为true之后，再构建和运行peer进程：</p>
+<pre><code>cd $GOPATH/src/github.com/hyperledger/fabric/peer
+go build
+./peer peer --peer-chaincodedev   
+</code></pre><p>也可以通过环境变量来启用security和privacy:</p>
+<pre><code>CORE_SECURITY_ENABLED=true CORE_SECURITY_PRIVACY=true ./peer peer --peer-chaincodedev
+</code></pre><h4 id="Vagrant-终端-2-chaincode"><a href="#Vagrant-终端-2-chaincode" class="headerlink" title="Vagrant 终端 2 (chaincode)"></a>Vagrant 终端 2 (chaincode)</h4><p>在命令行终端中，进入工作空间环境下的devenv子目录。登录Vagrant：</p>
+<pre><code>vagrant ssh
+</code></pre><p>构建源码仓库提供的chaincode_example02:</p>
+<pre><code>cd $GOPATH/src/github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02
+go build
+</code></pre><p>当你已经准备好要开始创建自己的chaincode时，在/fabric/examples/go/chaincode下创建一个子目录用来存放chaincode代码。你可以把chaincode_example02中的文件拷贝进去之后再修改</p>
+<p>运行下面的chaincode命令，用validating peer(Vagrant 终端 1)开始并注册chaincode:</p>
+<pre><code>CORE_CHAINCODE_ID_NAME=mycc CORE_PEER_ADDRESS=0.0.0.0:30303 ./chaincode_example02
+</code></pre><p>chaincode的控制台会显示”Received REGISTERED, ready for invocations”，这证明chaincode已经准备好接收请求了。如果上面没有显示那段信息的话，那就是部署的过程中有错误。请重新看一遍上面的步骤，解决这个问题。遵循下面的步骤发布chaincode，调用或者查询交易。</p>
+<h4 id="Vagrant-终端-3-CLI-or-REST-API"><a href="#Vagrant-终端-3-CLI-or-REST-API" class="headerlink" title="Vagrant 终端 3 (CLI or REST API)"></a>Vagrant 终端 3 (CLI or REST API)</h4><p>注意REST API的端口</p>
+<p>REST接口的端口在core.yaml中定义的是5000。如果要在Vagrant中发送一个Rest请求给peer节点，使用的是5000端口。如果在Vagrant之外，也就是虚拟机之外发送REST请求，要使用3000端口。这是在构建虚拟机时，配置在Vagrantfile中的。</p>
+<p>注意安全功能</p>
+<p>现在的安全实现假定终端用户的安全认证发生在应用程序层，而不是在chaincode的基础架构中。只要该安全认证对应用程序来说是合适的就行。在用户认证成功之后 ，应用程序要在CA中执行一次注册。如果尝试在CA中对同一个用户注册第二次，就会报错。在注册期间，应用程序会给CA发送一个请求验证用户是否注册成功，CA会响应一个用户证书和密钥对。从CA收到的注册和交易证书会被存在本地的/var/hyperledger/production/crypto/client/文件夹中。用户要通过指定的peer节点进行交易，就必须要在该节点的认证资料存储目录中有自己的对应的信息。指定peer节点下的目录只允许用户通过该peer节点进行交易。如果终端用户要通过多于一个peer节点来执行交易，应用程序要负责把所有的认证资料复制到其他的peer节点上。这是必须的，因为在CA上重复注册同一个用户会失败。</p>
+<p>当安全启用之后，命令行的命令和REST的请求中都必须包含已经登录的注册用户的enrollmentID ，否则就会导致错误。要登录一个注册后的用户，可以通过下面介绍的命令行或者REST API方式。</p>
+<p>用下面的命令在命令行中登录，username是membersrvc.yaml的users部分配置的enrollmentID 。</p>
+<p>在命令行终端中，进入工作空间环境下的devenv子目录。登录Vagrant：</p>
+<pre><code>vagrant ssh
+</code></pre><p>通过命令行接口登录，替换下面的username：</p>
+<pre><code>cd $GOPATH/src/github.com/hyperledger/fabric/peer
+./peer login &lt;username&gt;
+</code></pre><p>该命令会提示输入密码，这个密码也是在membersrce.yaml中的。</p>
+<p>通过REST API登录，发送一个POST请求到/registrar，要包含enrollmentID和enrollmentPW。记住，在Vagrant里面要用5000端口，在Vagrant外面要用3000端口。</p>
+<p>REST Request:</p>
+<pre><code>POST localhost:3000/registrar
+
+{
+    &quot;enrollId&quot;: &quot;jim&quot;,
+    &quot;enrollSecret&quot;: &quot;NPKYL39uKbkj&quot;
+}
+</code></pre><p>REST Response:</p>
+<pre><code>200 OK
+{
+    &quot;OK&quot;: &quot;Login successful for user &apos;jim&apos;.&quot;
+}
+</code></pre><h4 id="通过命令行接口或者REST-API发布Chaincode"><a href="#通过命令行接口或者REST-API发布Chaincode" class="headerlink" title="通过命令行接口或者REST API发布Chaincode"></a>通过命令行接口或者REST API发布Chaincode</h4><p>首先，发送一个chaincode deploy transaction，只发送一次，到validating peer。命令行接口会通过core.yaml中的配置信息连接到validating peer。记住，一般deploy transaction要求一个path参数来定位，构建，发布chaincode。但是由于这里的介绍是为本地开发模式指定的，而且chaincode是手动发布的，所以使用了name参数来替代。 </p>
+<pre><code>cd $GOPATH/src/github.com/hyperledger/fabric/peer
+./peer chaincode deploy -n mycc -c &apos;{&quot;Function&quot;:&quot;init&quot;, &quot;Args&quot;: [&quot;a&quot;,&quot;100&quot;, &quot;b&quot;, &quot;200&quot;]}&apos;
+</code></pre><p>也可以使用REST API来运行chaincode deploy transaction。记住，在Vagrant里面使用5000端口，在Vagrant外面使用3000端口。</p>
+<p>REST Request:</p>
+<pre><code>POST host:port/chaincode
+
+{
+    &quot;jsonrpc&quot;: &quot;2.0&quot;,
+    &quot;method&quot;: &quot;deploy&quot;,
+    &quot;params&quot;: {
+        &quot;type&quot;: 1,
+        &quot;chaincodeID&quot;:{
+            &quot;name&quot;: &quot;mycc&quot;
+        },
+        &quot;ctorMsg&quot;: {
+            &quot;function&quot;:&quot;init&quot;,
+            &quot;args&quot;:[&quot;a&quot;, &quot;100&quot;, &quot;b&quot;, &quot;200&quot;]
+        }
+    },
+    &quot;id&quot;: 1
+}
+</code></pre><p>REST Response:</p>
+<pre><code>{
+    &quot;jsonrpc&quot;: &quot;2.0&quot;,
+    &quot;result&quot;: {
+        &quot;status&quot;: &quot;OK&quot;,
+        &quot;message&quot;: &quot;mycc&quot;
+    },
+    &quot;id&quot;: 1
+}
+</code></pre><p>记住，当安全启用之后，要修改命令行的命令和REST API的请求内容，带上登录用户的enrollmentID。在命令行里，通过-u参数传递enrollmentID。在REST API里，通过secureContext。</p>
+<pre><code>./peer chaincode deploy -u jim -n mycc -c &apos;{&quot;Function&quot;:&quot;init&quot;, &quot;Args&quot;: [&quot;a&quot;,&quot;100&quot;, &quot;b&quot;, &quot;200&quot;]}&apos;
+</code></pre><p>REST Request:</p>
+<pre><code>POST host:port/chaincode
+
+{
+    &quot;jsonrpc&quot;: &quot;2.0&quot;,
+    &quot;method&quot;: &quot;deploy&quot;,
+    &quot;params&quot;: {
+        &quot;type&quot;: 1,
+        &quot;chaincodeID&quot;:{
+            &quot;name&quot;: &quot;mycc&quot;
+        },
+        &quot;ctorMsg&quot;: {
+            &quot;function&quot;:&quot;init&quot;,
+            &quot;args&quot;:[&quot;a&quot;, &quot;100&quot;, &quot;b&quot;, &quot;200&quot;]
+        },
+        &quot;secureContext&quot;: &quot;jim&quot;
+    },
+    &quot;id&quot;: 1
+}
+</code></pre><p>上面初始化了一个chaincode，包含了a和b的信息，假设是帐户余额信息，那么现在我们记下了a有100块，b有200块。</p>
+<h4 id="通过命令行接口或者REST-API调用Chaincode交易"><a href="#通过命令行接口或者REST-API调用Chaincode交易" class="headerlink" title="通过命令行接口或者REST API调用Chaincode交易"></a>通过命令行接口或者REST API调用Chaincode交易</h4><p>在命令行中通过chaincode调用交易，-n参数需要和chaincode窗口(Vagrant 终端 2)中的-n参数匹配：</p>
+<pre><code>./peer chaincode invoke -l golang -n mycc -c &apos;{&quot;Function&quot;: &quot;invoke&quot;, &quot;Args&quot;: [&quot;a&quot;, &quot;b&quot;, &quot;10&quot;]}&apos;
+</code></pre><p>下面是通过REST API调用，注意端口哦：</p>
+<p>REST Request:</p>
+<pre><code>POST host:port/chaincode
+
+{
+    &quot;jsonrpc&quot;: &quot;2.0&quot;,
+    &quot;method&quot;: &quot;invoke&quot;,
+    &quot;params&quot;: {
+        &quot;type&quot;: 1,
+        &quot;chaincodeID&quot;:{
+            &quot;name&quot;:&quot;mycc&quot;
+        },
+        &quot;ctorMsg&quot;: {
+            &quot;function&quot;:&quot;invoke&quot;,
+            &quot;args&quot;:[&quot;a&quot;, &quot;b&quot;, &quot;10&quot;]
+        }
+    },
+    &quot;id&quot;: 3
+}
+</code></pre><p>REST Response:</p>
+<pre><code>{
+    &quot;jsonrpc&quot;: &quot;2.0&quot;,
+    &quot;result&quot;: {
+        &quot;status&quot;: &quot;OK&quot;,
+        &quot;message&quot;: &quot;5a4540e5-902b-422d-a6ab-e70ab36a2e6d&quot;
+    },
+    &quot;id&quot;: 3
+}
+</code></pre><p>下面是在启用安全之后的调用方式：</p>
+<pre><code>./peer chaincode invoke -u jim -l golang -n mycc -c &apos;{&quot;Function&quot;: &quot;invoke&quot;, &quot;Args&quot;: [&quot;a&quot;, &quot;b&quot;, &quot;10&quot;]}&apos;
+</code></pre><p>REST Request:</p>
+<pre><code>POST host:port/chaincode
+
+{
+    &quot;jsonrpc&quot;: &quot;2.0&quot;,
+    &quot;method&quot;: &quot;invoke&quot;,
+    &quot;params&quot;: {
+        &quot;type&quot;: 1,
+        &quot;chaincodeID&quot;:{
+            &quot;name&quot;:&quot;mycc&quot;
+        },
+        &quot;ctorMsg&quot;: {
+            &quot;function&quot;:&quot;invoke&quot;,
+            &quot;args&quot;:[&quot;a&quot;, &quot;b&quot;, &quot;10&quot;]
+        },
+        &quot;secureContext&quot;: &quot;jim&quot;
+    },
+    &quot;id&quot;: 3
+}
+</code></pre><p>上面发起了一笔交易，将a的10块钱给了b。</p>
+<h4 id="通过命令行接口或者REST-API查询Chaincode"><a href="#通过命令行接口或者REST-API查询Chaincode" class="headerlink" title="通过命令行接口或者REST API查询Chaincode"></a>通过命令行接口或者REST API查询Chaincode</h4><p>查询chaincode中的指定信息:</p>
+<pre><code>./peer chaincode query -l golang -n mycc -c &apos;{&quot;Function&quot;: &quot;query&quot;, &quot;Args&quot;: [&quot;b&quot;]}&apos;
+</code></pre><p>下面是响应信息：</p>
+<pre><code>210
+</code></pre><p>下面是通过REST API的方式查询chaincode信息：</p>
+<p>REST Request:</p>
+<pre><code>POST host:port/chaincode
+
+{
+    &quot;jsonrpc&quot;: &quot;2.0&quot;,
+    &quot;method&quot;: &quot;query&quot;,
+    &quot;params&quot;: {
+        &quot;type&quot;: 1,
+        &quot;chaincodeID&quot;:{
+            &quot;name&quot;:&quot;mycc&quot;
+        },
+        &quot;ctorMsg&quot;: {
+            &quot;function&quot;:&quot;query&quot;,
+            &quot;args&quot;:[&quot;a&quot;]
+        }
+    },
+    &quot;id&quot;: 5
+}
+</code></pre><p>REST Response:</p>
+<pre><code>{
+    &quot;jsonrpc&quot;: &quot;2.0&quot;,
+    &quot;result&quot;: {
+        &quot;status&quot;: &quot;OK&quot;,
+        &quot;message&quot;: &quot;90&quot;
+    },
+    &quot;id&quot;: 5
+}
+</code></pre><p>下面是安全启用之后的调用方式：</p>
+<pre><code>./peer chaincode query -u jim -l golang -n mycc -c &apos;{&quot;Function&quot;: &quot;query&quot;, &quot;Args&quot;: [&quot;b&quot;]}&apos;
+</code></pre><p>REST Request:</p>
+<pre><code>POST host:port/chaincode
+
+{
+    &quot;jsonrpc&quot;: &quot;2.0&quot;,
+    &quot;method&quot;: &quot;query&quot;,
+    &quot;params&quot;: {
+        &quot;type&quot;: 1,
+        &quot;chaincodeID&quot;:{
+            &quot;name&quot;:&quot;mycc&quot;
+        },
+        &quot;ctorMsg&quot;: {
+            &quot;function&quot;:&quot;query&quot;,
+            &quot;args&quot;:[&quot;a&quot;]
+        },
+        &quot;secureContext&quot;: &quot;jim&quot;
+    },
+    &quot;id&quot;: 5
+}
+</code></pre><h4 id="删除启用了安全之后，产生的临时文件"><a href="#删除启用了安全之后，产生的临时文件" class="headerlink" title="删除启用了安全之后，产生的临时文件"></a>删除启用了安全之后，产生的临时文件</h4><p>在安全模式下测试完chaincode后，要删除CA服务生成的临时文件，要删除客户端注册证书，注册key，交易证书链等等。如果你想注册一个前面已经注册的用户，就必须删除这些文件。</p>
+<p>在命令行终端中，进入到工作空间环境的devenv子目录。登录到Vagrant终端：</p>
+<pre><code>vagrant ssh
+</code></pre><p>然后运行：</p>
+<pre><code>rm -rf /var/hyperledger/production
+</code></pre><p>原文地址：<a href="https://github.com/hyperledger/fabric/blob/master/docs/API/SandboxSetup.md" target="_blank" rel="external">https://github.com/hyperledger/fabric/blob/master/docs/API/SandboxSetup.md</a></p>
+</div></article></div></section><footer><div class="paginator"><a href="/2016/04/29/openblockchain设置开发网络环境/" class="prev">PREV</a><a href="/2016/04/29/安装openblockchain/" class="next">NEXT</a></div><div class="copyright"><p>© 2016 <a href="http://fubai.tech">fubai</a>, unless otherwise noted.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "//hm.baidu.com/hm.js?a36e15d9e2adec9a21fcdd9f686b1ed2";var s = document.getElementsByTagName("script")[0]; s.parentNode.insertBefore(hm, s);})();</script></body></html>
