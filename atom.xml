@@ -5,11 +5,11 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://fubai.tech/"/>
-  <updated>2016-04-29T12:46:22.000Z</updated>
+  <updated>2016-04-29T12:54:05.000Z</updated>
   <id>http://fubai.tech/</id>
   
   <author>
-    <name>fubai</name>
+    <name>浮白</name>
     
   </author>
   
@@ -20,18 +20,18 @@
     <link href="http://fubai.tech/2016/04/29/%E6%80%8E%E4%B9%88%E5%86%99chaincode/"/>
     <id>http://fubai.tech/2016/04/29/怎么写chaincode/</id>
     <published>2016-04-29T12:40:22.000Z</published>
-    <updated>2016-04-29T12:46:22.000Z</updated>
+    <updated>2016-04-29T12:54:05.000Z</updated>
     
     <content type="html">&lt;h4 id=&quot;什么是chaincode&quot;&gt;&lt;a href=&quot;#什么是chaincode&quot; class=&quot;headerlink&quot; title=&quot;什么是chaincode?&quot;&gt;&lt;/a&gt;什么是chaincode?&lt;/h4&gt;&lt;p&gt;Chaincode是一段能让你和网络中共享的账本进行交互的代码。每当你在网络上进行交易，都是在调用chaincode的函数来读取或写入账本。&lt;/p&gt;
 &lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
-&lt;h4 id=&quot;实现chaincode的接口&quot;&gt;&lt;a href=&quot;#实现chaincode的接口&quot; class=&quot;headerlink&quot; title=&quot;实现chaincode的接口&quot;&gt;&lt;/a&gt;实现chaincode的接口&lt;/h4&gt;&lt;p&gt;第一，要在你的golang代码中实现chaincode shim接口。有三个主要的函数：Init，Invoke和Query。这三个函数都有相同的原型；他们都需要一个被命名为function的字符串参数和一个字符串数组参数。他们之间的不同之处在于被调用的时机。&lt;/p&gt;
-&lt;h4 id=&quot;依赖&quot;&gt;&lt;a href=&quot;#依赖&quot; class=&quot;headerlink&quot; title=&quot;依赖&quot;&gt;&lt;/a&gt;依赖&lt;/h4&gt;&lt;p&gt;import语句列出来几个需要的依赖：&lt;/p&gt;
+&lt;h4 id=&quot;实现chaincode的接口&quot;&gt;&lt;a href=&quot;#实现chaincode的接口&quot; class=&quot;headerlink&quot; title=&quot;实现chaincode的接口&quot;&gt;&lt;/a&gt;实现chaincode的接口&lt;/h4&gt;&lt;p&gt;第一，要在你的golang代码中实现chaincode shim接口。有三个主要的函数：Init，Invoke和Query。这三个函数都有相同的原型，他们都需要一个被命名为function的字符串参数和一个字符串数组参数。他们之间的不同之处在于被调用的时机。&lt;/p&gt;
+&lt;h4 id=&quot;依赖&quot;&gt;&lt;a href=&quot;#依赖&quot; class=&quot;headerlink&quot; title=&quot;依赖&quot;&gt;&lt;/a&gt;依赖&lt;/h4&gt;&lt;p&gt;import语句列出了几个需要的依赖：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;fmt - 包含Println用于调试和记录日志。&lt;/li&gt;
 &lt;li&gt;errors - 标准go错误格式。&lt;/li&gt;
 &lt;li&gt;github.com/hyperledger/fabric/core/chaincode/shim - 和peer交互的代码。&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h4 id=&quot;Init&quot;&gt;&lt;a href=&quot;#Init&quot; class=&quot;headerlink&quot; title=&quot;Init()&quot;&gt;&lt;/a&gt;Init()&lt;/h4&gt;&lt;p&gt;Init会在第一次发布chaincode的时候被调用。正如函数名的含义，Init函数应该被用于chaincode初始化。在我们的例子中，我们用Init配置了账本上一个变量的初始状态。 &lt;/p&gt;
+&lt;h4 id=&quot;Init&quot;&gt;&lt;a href=&quot;#Init&quot; class=&quot;headerlink&quot; title=&quot;Init()&quot;&gt;&lt;/a&gt;Init()&lt;/h4&gt;&lt;p&gt;Init会在第一次发布chaincode时被调用。正如函数名的含义，Init函数应该被用于chaincode初始化。在我们的例子中，我们用Init配置了账本上一个变量的初始状态。 &lt;/p&gt;
 &lt;p&gt;现在来修改chaincode.go。修改Init函数，把args参数的第一个元素的存储到键”hello_world”上。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
     if len(args) != 1 {
@@ -46,7 +46,7 @@
     return nil, nil
 }
 &lt;/code&gt;&lt;/pre&gt;&lt;p&gt;通过shim的stub.PutState函数来完成，stub.PutState的第一个参数是字符串类型的键，第二个参数是byte数组类型的值。这个函数可能会返回一个错误，我们的代码里做了检查，如果错误出现了，就把这个错误返回。&lt;/p&gt;
-&lt;h4 id=&quot;Invoke&quot;&gt;&lt;a href=&quot;#Invoke&quot; class=&quot;headerlink&quot; title=&quot;Invoke()&quot;&gt;&lt;/a&gt;Invoke()&lt;/h4&gt;&lt;p&gt;如果要用chaincode函数真正开始工作，那就该调用Invoke函数了。调用事务会成为链上的块。Invoke的结构很简单。它接收一个被命名为function的字符串参数，并基于这个参数调用chaincode的Go函数。&lt;/p&gt;
+&lt;h4 id=&quot;Invoke&quot;&gt;&lt;a href=&quot;#Invoke&quot; class=&quot;headerlink&quot; title=&quot;Invoke()&quot;&gt;&lt;/a&gt;Invoke()&lt;/h4&gt;&lt;p&gt;要用chaincode函数真正开始工作，那就该调用Invoke函数了。交易调用会成为链上的块。Invoke的结构很简单。它接收一个被命名为function的字符串参数，并基于这个参数调用chaincode的Go函数。&lt;/p&gt;
 &lt;p&gt;在你的chaincode.go文件中，修改Invoke函数，调用write方法。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
     fmt.Println(&amp;quot;invoke is running &amp;quot; + function)
@@ -111,7 +111,7 @@
 
     return valAsbytes, nil
 }
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;read函数使用了PutState的补充GetState方法。这个shim的方法只有一个参数，这个参数是要查询的key。这个函数会返回一个byte数组。&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;read函数使用了PutState的补充方法GetState。这个shim的方法只有一个参数，这个参数是要查询的key。这个函数会返回一个byte数组。&lt;/p&gt;
 &lt;h4 id=&quot;Main&quot;&gt;&lt;a href=&quot;#Main&quot; class=&quot;headerlink&quot; title=&quot;Main()&quot;&gt;&lt;/a&gt;Main()&lt;/h4&gt;&lt;p&gt;最后，创建一个main函数，在为这个chaincode部署每个peer实例的时候，这个main方法就会被调用。这个main方法启动了chaincode，并把自己注册到peer中。拷贝下面的代码就行了，不需要修改：&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;func main() {
     err := shim.Start(new(SimpleChaincode))
